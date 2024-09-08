@@ -10,15 +10,17 @@ set -euo pipefail
 __ScriptVersion="0.1" # Define a versão do script
 
 function handle_arguments() {
-    while getopts ":hr" opt
+    while getopts ":hrc" opt
     do
     case $opt in
-        h|help     )  show_help "$@"; exit 0   ;;
+        h|help     )  mostrar_ajuda "$@"; exit 0   ;;
 
         r|reload     )  ajustar_confs "$@"; exit 0   ;;
 
-    * )  echo -e "\n  Option does not exist : $OPTARG\n"
-          show_help; exit 1   ;;
+        c|chat     )  finaliza_chat "$@"; exit 0   ;;
+
+    * )  echo -e "\n  opção não existe : $OPTARG\n"
+          mostrar_ajuda; exit 1   ;;
 
     esac    # --- end of case ---
 done
@@ -71,5 +73,45 @@ function ajustar_confs() {
     execute_scripts
 }
 # ----------  fim da função 'ajustar_confs'  ----------
+
+#===  FUNÇÃO  ==================================================================
+#       NOME: finaliza_chat
+#  DESCRIÇÃO: Lista todos os chats ativo do cliente, e dá a opção de finalizar um deles
+#        OBS: Inspirado no script 'remoteTunnelAutomatization' do Josimar Rocha
+#===============================================================================
+function finaliza_chat() {
+    local lista_contatos # Variável que armazenará a lista de contatos
+    mapfile -t lista_contatos < <(php /home/futurofone/web/core/test/chats/contatos.php | grep -v "^QUANTIDADE" | sed '/^$/d') # Usa o mapfile para preencher a variável 'lista_contatos' com uma array com os contatos de chat
+
+    local count=0
+    for contato in "${lista_contatos[@]}" # Loop para iterar sobre todos os contatos na lista
+    do
+        if [ $count -eq 0 ]; then  # Se variável count for 0, imprime o cabeçalho "OPÇÃO". Isso porque a primeira linha impressa pelo script contatos.php é um informativo sobre o valor presente na coluna
+            echo "OPÇÃO |" "${contato}" 
+            ((count++))
+
+        elif [ $count -lt 10 ]; then
+            echo "[${count}]  |" "${contato}" # Caso a variável for diferente de 0, e menor que 10 (explicação abaixo), imprime um número (count) para identificar o contato
+            ((count++))
+        else
+            echo "[${count}] |" "${contato}" # Caso o número maior que 10, ajusta a barra para manter a formatação ;p
+            ((count++))
+       fi
+    done
+
+    while true; do # Loop para checkar o STDIN informado no read
+        read -p "Escolha a opção desejada (1-999): " contato_escolhido # Dá a opção do usuário escolher qual chat quer finalizar
+        if [[ "$contato_escolhido" =~ ^[0-9]+$ ]] && [ "$contato_escolhido" -ge 1 ] && [ "$contato_escolhido" -le 999 ]; then # Verifica se a entrada é um número entre 1 e 999
+            break  # Sai do loop se o valor for válido
+        else
+            echo "Por favor, insira um número válido entre 1 e 999." # Caso não, repete o loop até um valor válido seja informado
+        fi
+    done
+
+    contato_escolhido_id=$(echo ${lista_contatos[contato_escolhido]} | awk $'{ print $1 }') # Manipula a informação dentro da variável contato_escolhido, e pega somente o ID do chat
+
+    php /home/futurofone/web/core/cmd/chat/finalizarContato.php "${contato_escolhido_id}" # Finaliza o contato escolhido
+}
+# ----------  fim da função 'finaliza_chat'  ----------
 
 run "$@"
