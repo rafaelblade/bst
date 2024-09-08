@@ -7,13 +7,15 @@ set -euo pipefail
 # o - script retorna erro se um dos comandos concatenados falhe
 # x - output de cada linha (debug)
 
-__ScriptVersion="0.1" # Define a versão do script
+__ScriptVersion="0.2.1" # Define a versão do script
 
 function handle_arguments() {
-    while getopts ":hrc" opt
+    while getopts ":hrcv" opt
     do
     case $opt in
         h|help     )  mostrar_ajuda "$@"; exit 0   ;;
+
+        v|version     )  echo "$0 -- Version $__ScriptVersion"; exit 0   ;;
 
         r|reload     )  ajustar_confs "$@"; exit 0   ;;
 
