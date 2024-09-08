@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #------------------------------------
-set -euox pipefail
+set -euo pipefail
 # e - o script para no erro (return != 0)
 # u - retorna erro se a variável não for definida
 # o - script retorna erro se um dos comandos concatenados falhe
@@ -44,30 +44,32 @@ function ajustar_confs() {
     local asterisk_conf="/home/futurofone/scripts/new/ajustaAsteriskConf.php"
     local asterisk_includes="/home/futurofone/scripts/new/ajustaAsteriskIncludes.php"
 
+    function reload_modules() {
+        asterisk -rx "sip reload" && echo "SIP reloaded." || { echo "Falha ao reiniciar o modulo SIP"; exit 1; }
+        asterisk -rx "iax2 reload" && echo "PJSIP reloaded." || { echo "Falha ao reiniciar o modulo PJSIP"; exit 1; }
+        asterisk -rx "dialplan reload" || { echo "Falha ao reiniciar o Dialplan"; exit 1; }
+        exit 0
+    }
+
     function execute_scripts() {
         if [ -x "$asterisk_conf" ]; then
-            php "$asterisk_conf" && echo "Executando o script AjustaAsteriskConf" || { echo "Erro ao executar o script AjustaAsteriskConf"; exit 1; }
+            php "$asterisk_conf" && echo "O script ajustaAsteriskConf foi executado" || { echo "Erro ao executar o script ajustaAsteriskConf"; exit 1; }
         else
-            echo "O script AjustaAsteriskConf não foi encontrado no caminho ${asterisk_conf}"
+            echo "O script ajustaAsteriskConf não foi encontrado no caminho ${asterisk_conf}"
             exit 1
         fi
 
         if [ -x "$asterisk_includes" ]; then
-            php "$asterisk_includes" && echo "Executando o script AjustaAsteriskIncludes" || { echo "Erro ao executar o script AjustaAsteriskIncludes"; exit 1; }
+            php "$asterisk_includes" && echo "O script ajustaAsteriskIncludes foi executado" || { echo "Erro ao executar o script ajustaAsteriskIncludes"; exit 1; }
         else
-            echo "O script AjustaAsteriskIncludes não foi encontrado no caminho ${asterisk_includes}"
+            echo "O script ajustaAsteriskIncludes não foi encontrado no caminho ${asterisk_includes}"
             exit 1
         fi
+        reload_modules
     }
 
-    function reload_modules() {
-        asterisk -rx "sip reload" && echo "Modulo SIP recarregado com sucesso" || { echo "Falha ao reiniciar o modulo SIP"; exit 1; }
-        asterisk -rx "iax2 reload" && echo "Modulo PJSIP recarregado com sucesso" || { echo "Falha ao reiniciar o modulo PJSIP"; exit 1; }
-        asterisk -rx "dialplan reload" && echo "Dialplan recarregado com sucesso" || { echo "Falha ao reiniciar o Dialplan"; exit 1; }
-    }
     execute_scripts
-    reload_modules
 }
-# ----------  fim da função 'reload_modules'  ----------
+# ----------  fim da função 'ajustar_confs'  ----------
 
 run "$@"
