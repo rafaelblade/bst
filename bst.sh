@@ -90,14 +90,14 @@ function finaliza_chat() {
     do
         if [ $count -eq 0 ]; then  # Se variável count for 0, imprime o cabeçalho "OPÇÃO". Isso porque a primeira linha impressa pelo script contatos.php é um informativo sobre o valor presente na coluna
             echo "OPÇÃO |" "${contato}" 
-            ((count++))
+            let count=count+1
 
         elif [ $count -lt 10 ]; then
             echo "[${count}]  |" "${contato}" # Caso a variável for diferente de 0, e menor que 10 (explicação abaixo), imprime um número (count) para identificar o contato
-            ((count++))
+            let count=count+1
         else
             echo "[${count}] |" "${contato}" # Caso o número maior que 10, ajusta a barra para manter a formatação ;p
-            ((count++))
+            let count=count+1
        fi
     done
 
