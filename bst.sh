@@ -9,36 +9,6 @@ set -euo pipefail
 
 __ScriptVersion="0.2.1" # Define a versão do script
 
-function handle_arguments() {
-    while getopts ":hrcv" opt
-    do
-    case $opt in
-        h|help     )  mostrar_ajuda "$@"; exit 0   ;;
-
-        v|version     )  echo "$0 -- Version $__ScriptVersion"; exit 0   ;;
-
-        r|reload     )  ajustar_confs "$@"; exit 0   ;;
-
-        c|chat     )  finaliza_chat "$@"; exit 0   ;;
-
-    * )  echo -e "\n  opção não existe : $OPTARG\n"
-          mostrar_ajuda; exit 1   ;;
-
-    esac    # --- end of case ---
-done
-shift $((OPTIND-1))
-}
-
-#===  FUNÇÃO  ==================================================================
-#       NOME: run
-#  DESCRIÇÃO: Resposável pela execução inicial do script.
-#        OBS: Ele é chamado na última linha do script
-#===============================================================================
-function run() {
-    handle_arguments "$@"
-}
-# ----------  fim da função 'run'  ----------
-
 #===  FUNÇÃO  ==================================================================
 #       NOME: ajustar_confs
 #  DESCRIÇÃO: Executa os scripts PHP responsáveis por passar as informações do cliente web para o Asterisk, além de reiniciar os módulos importantes.
@@ -49,9 +19,9 @@ function ajustar_confs() {
     local asterisk_includes="/home/futurofone/scripts/new/ajustaAsteriskIncludes.php"
 
     function reload_modules() {
-        asterisk -rx "sip reload" && echo "SIP reloaded." || { echo "Falha ao reiniciar o modulo SIP"; exit 1; }
-        asterisk -rx "iax2 reload" && echo "PJSIP reloaded." || { echo "Falha ao reiniciar o modulo PJSIP"; exit 1; }
-        asterisk -rx "dialplan reload" || { echo "Falha ao reiniciar o Dialplan"; exit 1; }
+        asterisk -rx "sip reload" && echo "SIP reloaded." || { echo "Falha ao reiniciar o modulo SIP" ; exit 1; }
+        asterisk -rx "iax2 reload" && echo "PJSIP reloaded." || { echo "Falha ao reiniciar o modulo PJSIP" ; exit 1; } 
+        asterisk -rx "dialplan reload" || { echo "Falha ao reiniciar o dialplan" ; exit 1; }
         exit 0
     }
 
@@ -115,5 +85,69 @@ function finaliza_chat() {
     php /home/futurofone/web/core/cmd/chat/finalizarContato.php "${contato_escolhido_id}" # Finaliza o contato escolhido
 }
 # ----------  fim da função 'finaliza_chat'  ----------
+
+#===  FUNÇÃO  ==================================================================
+#       NOME: greppy
+#  DESCRIÇÃO: Função que identifica se o arquivo de log é um arquivo zst, e utiliza o zstdcat automaticamento junto com o grep.
+#        OBS:
+#===============================================================================
+function greppy(){
+    local argumentos
+    local arquivo
+    argumentos=("$@")  # Armazena todos os argumentos no array 'argumentos'
+
+    # Certifica-se de que há pelo menos 2 argumentos
+    if [ "${#argumentos[@]}" -lt 2 ]; then
+        echo "Argumentos insuficientes"
+        return 1
+    fi
+
+    # Obtém o último argumento (o arquivo) usando o índice correto
+    arquivo="${argumentos[${#argumentos[@]}-1]}"  # Último elemento do array
+    unset argumentos[${#argumentos[@]}-1]        # Remove o último elemento (arquivo)
+
+    # O primeiro argumento pode ser flags como -i ou -E, que devem ser passadas diretamente para o grep
+    grep_flags=("${argumentos[@]}")  # Armazena os argumentos restantes como flags e padrões
+
+    # Verifica se o arquivo termina com .zst
+    if [[ "$arquivo" == *.zst ]]; then
+        zstdcat "$arquivo" | grep "${grep_flags[@]}"  # Descomprime e aplica o grep
+    else
+        grep "${grep_flags[@]}" "$arquivo"  # Se não for um arquivo .zst, aplica o grep diretamente
+    fi
+}
+# ----------  fim da função 'greppy'  ----------
+
+function handle_arguments() {
+    while getopts ":hrcvg" opt
+    do
+    case $opt in
+        h)  mostrar_ajuda "$@"; exit 0   ;;
+
+        v)  echo "$0 -- Version $__ScriptVersion"; exit 0   ;;
+
+        r)  ajustar_confs "$@"; exit 0   ;;
+
+        c)  finaliza_chat "$@"; exit 0   ;;
+        
+        g)  shift; greppy "$@"; exit 0   ;;
+    
+    * )  echo -e "\n  opção não existe : $OPTARG\n"
+          mostrar_ajuda; exit 1   ;;
+
+    esac    # --- end of case ---
+done
+shift $((OPTIND-1))
+}
+
+#===  FUNÇÃO  ==================================================================
+#       NOME: run
+#  DESCRIÇÃO: Resposável pela execução inicial do script.
+#        OBS: Ele é chamado na última linha do script
+#===============================================================================
+function run() {
+    handle_arguments "$@"
+}   
+# ----------  fim da função 'run'  ----------
 
 run "$@"
